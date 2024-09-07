@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HKJC Mark Six Lottery</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .top-section, .bottom-section {
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .top-section {
+            flex: 0 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .bottom-section {
+            flex: 1 0 50vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .input-section, .history-section {
+            margin-bottom: 20px;
+        }
+        input[type="number"] {
+            width: 40px;  /* Reduced from 50px */
+            margin-right: 5px;  /* Reduced from 5px */
+            padding: 10px;  /* Reduced from 5px */
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 14px;  /* Added to reduce font size */
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        h2 {
+            font-size: 1.5em;
+            margin: 10px 0;
+            color: #333;
+        }
+        #lotteryForm {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        #lotteryForm > div {
+            margin: 10px 0;
+        }
+        .number-inputs {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            max-width: 100%;  /* Ensure it doesn't overflow the container */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+        .number-inputs input {
+            flex: 0 0 auto;
+            width: 45px;  /* Increased from 35px */
+            font-size: 14px;
+            padding: 5px 2px; /* Reduced padding */
+            text-align: center;
+        }
+        button[type="submit"] {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        #historyList {
+            list-style-type: none;
+            padding: 0;
+        }
+        #historyList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fff;
+            margin-bottom: 5px;
+            padding: 10px;
+            border-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow-x: auto; /* Allow horizontal scrolling if needed */
+            white-space: nowrap; /* Prevent line breaks */
+        }
+        #historyList li span {
+            flex-grow: 1;
+            margin-right: 10px;
+            overflow-x: auto; /* Allow horizontal scrolling if needed */
+            white-space: nowrap; /* Prevent line breaks */
+            padding-bottom: 5px; /* Add some space for the scrollbar */
+        }
+        .toggle-btn {
+            display: none;
+            margin-bottom: 10px;
+        }
+        @media (min-width: 768px) {
+            body {
+                flex-direction: row;
+            }
+            .top-section {
+                width: 40%;
+                border-right: 1px solid #ccc;
+                overflow-y: auto;
+            }
+            .bottom-section {
+                width: 60%;
+                flex: 1 0 auto;
+            }
+        }
+        .confirmation-message {
+            display: none;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .confirmation-buttons {
+            margin-top: 10px;
+        }
+        .confirmation-buttons button {
+            margin-right: 10px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .confirm-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .cancel-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        @media (max-width: 767px) {
+            .toggle-btn {
+                display: block;
+            }
+            .input-section, .history-section {
+                display: none;
+            }
+            .input-section.expanded, .history-section.expanded {
+                display: block;
+            }
+            input[type="number"] {
+                width: 35px;  /* Further reduced for mobile */
+                font-size: 12px;  /* Smaller font size for mobile */
+            }
+            .number-inputs input {
+                width: 40px; /* Slightly reduced for mobile */
+                font-size: 13px; /* Slightly reduced font size for mobile */
+            }
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+    <div class="top-section">
+        <button class="toggle-btn" onclick="toggleInputSection()">Toggle Input Section</button>
+        <div class="input-section">
+            <h2>HKJC Mark Six Lottery</h2>
+            <form id="lotteryForm">
+                <div>
+                    <label for="drawNumber">Draw Number: 24/</label>
+                    <input type="number" id="drawNumber" min="1" value="101" required>
+                </div>
+                <div>
+                    <label>Numbers:</label>
+                </div>
+                <div class="number-inputs">
+                    <input type="number" min="1" max="49" required>
+                    <input type="number" min="1" max="49" required>
+                    <input type="number" min="1" max="49" required>
+                    <input type="number" min="1" max="49" required>
+                    <input type="number" min="1" max="49" required>
+                    <input type="number" min="1" max="49" required>
+                </div>
+                <button type="submit">Submit</button>
+            </form>
+            <div id="confirmationMessage" class="confirmation-message"></div>
+        </div>
+        <button class="toggle-btn" onclick="toggleHistorySection()">Toggle Recent Submissions</button>
+        <div class="history-section">
+            <h2>Recent Submissions</h2>
+            <ul id="historyList"></ul>
+        </div>
+    </div>
+    <div class="bottom-section">
+        <iframe src="https://bet.hkjc.com/ch/marksix/results" title="Mark Six Results"></iframe>
+    </div>
+
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBZ_qtdZ-ab0bVTcVx2_J8L0ONSEddF_jI",
+            authDomain: "mark6-d1ef6.firebaseapp.com",
+            projectId: "mark6-d1ef6",
+            storageBucket: "mark6-d1ef6.appspot.com",
+            messagingSenderId: "489545682932",
+            appId: "1:489545682932:web:1c1248b546140987c9f3a1"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let history = [];
+        let pendingEntry = null;
+
+        function updateHistoryList() {
+            database.ref('history').once('value').then((snapshot) => {
+                history = snapshot.val() || [];
+                const historyList = document.getElementById('historyList');
+                historyList.innerHTML = '';
+                history.slice(0, 10).forEach((entry, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `
+                        <span>${entry}</span>
+                        <button class="delete-btn" onclick="deleteEntry(${index})">Delete</button>
+                    `;
+                    historyList.appendChild(listItem);
+                });
+            });
+        }
+
+        function deleteEntry(index) {
+            history.splice(index, 1);
+            database.ref('history').set(history);
+            updateHistoryList();
+            showMessage('Entry deleted successfully');
+        }
+
+        function showMessage(message, isConfirmation = false) {
+            const confirmationMessage = document.getElementById('confirmationMessage');
+            confirmationMessage.innerHTML = message;
+            if (isConfirmation) {
+                confirmationMessage.innerHTML += `
+                    <div class="confirmation-buttons">
+                        <button class="confirm-btn" onclick="confirmSubmission()">OK</button>
+                        <button class="cancel-btn" onclick="cancelSubmission()">Cancel</button>
+                    </div>
+                `;
+            }
+            confirmationMessage.style.display = 'block';
+            if (!isConfirmation) {
+                setTimeout(() => {
+                    confirmationMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function confirmSubmission() {
+            if (pendingEntry) {
+                history.unshift(pendingEntry);
+                history = history.slice(0, 10);
+                database.ref('history').set(history);
+                updateHistoryList();
+                showMessage('Entry submitted successfully');
+                pendingEntry = null;
+            }
+        }
+
+        function cancelSubmission() {
+            pendingEntry = null;
+            showMessage('Submission cancelled');
+        }
+
+        document.addEventListener('DOMContentLoaded', updateHistoryList);
+
+        document.getElementById('lotteryForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const drawNumber = document.getElementById('drawNumber').value;
+            const numberInputs = Array.from(e.target.querySelectorAll('input[type="number"]')).slice(1);
+            const numbers = numberInputs.map(input => input.value);
+
+            // Validate for duplicate numbers
+            const uniqueNumbers = new Set(numbers);
+            if (uniqueNumbers.size !== numbers.length) {
+                showMessage('Error: Duplicate numbers are not allowed');
+                return;
+            }
+
+            const entry = `24/${drawNumber} ${numbers.join(' + ')}`;
+            pendingEntry = entry;
+
+            showMessage(`Confirm submission: ${entry}`, true);
+
+            // Reset only the number inputs, not the draw number
+            numberInputs.forEach(input => input.value = '');
+        });
+
+        function toggleInputSection() {
+            const inputSection = document.querySelector('.input-section');
+            inputSection.classList.toggle('expanded');
+        }
+
+        function toggleHistorySection() {
+            const historySection = document.querySelector('.history-section');
+            historySection.classList.toggle('expanded');
+        }
+    </script>
+</body>
+</html>

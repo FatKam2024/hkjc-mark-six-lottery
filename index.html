@@ -24,9 +24,10 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .bottom-section {
-            flex: 1 0 50vh;
+            flex: 1 0 auto;  /* Changed from flex: 1 0 50vh; */
             display: flex;
             flex-direction: column;
+            min-height: 500px;  /* Added minimum height */
         }
         .input-section, .history-section {
             margin-bottom: 20px;
@@ -43,6 +44,7 @@
             width: 100%;
             height: 100%;
             border: none;
+            min-height: 500px;  /* Added minimum height */
         }
         h2 {
             font-size: 1.5em;
@@ -119,10 +121,12 @@
                 width: 40%;
                 border-right: 1px solid #ccc;
                 overflow-y: auto;
+                max-height: 100vh;  /* Added max-height */
             }
             .bottom-section {
                 width: 60%;
                 flex: 1 0 auto;
+                height: 100vh;  /* Make it full viewport height on desktop */
             }
         }
         .confirmation-message {
@@ -227,6 +231,7 @@
         const firebaseConfig = {
             apiKey: "AIzaSyBZ_qtdZ-ab0bVTcVx2_J8L0ONSEddF_jI",
             authDomain: "mark6-d1ef6.firebaseapp.com",
+            databaseURL: "https://mark6-d1ef6-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "mark6-d1ef6",
             storageBucket: "mark6-d1ef6.appspot.com",
             messagingSenderId: "489545682932",
@@ -237,30 +242,42 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        let history = [];
         let pendingEntry = null;
 
         function updateHistoryList() {
-            database.ref('history').once('value').then((snapshot) => {
-                history = snapshot.val() || [];
-                const historyList = document.getElementById('historyList');
-                historyList.innerHTML = '';
-                history.slice(0, 10).forEach((entry, index) => {
-                    const listItem = document.createElement('li');
-                    listItem.innerHTML = `
-                        <span>${entry}</span>
-                        <button class="delete-btn" onclick="deleteEntry(${index})">Delete</button>
-                    `;
-                    historyList.appendChild(listItem);
+            database.ref('history').orderByKey().limitToLast(10).once('value')
+                .then((snapshot) => {
+                    const historyList = document.getElementById('historyList');
+                    historyList.innerHTML = '';
+                    const entries = [];
+                    snapshot.forEach((childSnapshot) => {
+                        entries.unshift({key: childSnapshot.key, value: childSnapshot.val()});
+                    });
+                    entries.forEach((entry) => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `
+                            <span>${entry.value}</span>
+                            <button class="delete-btn" onclick="deleteEntry('${entry.key}')">Delete</button>
+                        `;
+                        historyList.appendChild(listItem);
+                    });
+                })
+                .catch((error) => {
+                    console.error("Error fetching history: ", error);
+                    showMessage('Error fetching history. Please refresh the page.');
                 });
-            });
         }
 
-        function deleteEntry(index) {
-            history.splice(index, 1);
-            database.ref('history').set(history);
-            updateHistoryList();
-            showMessage('Entry deleted successfully');
+        function deleteEntry(key) {
+            database.ref('history').child(key).remove()
+                .then(() => {
+                    updateHistoryList();
+                    showMessage('Entry deleted successfully');
+                })
+                .catch((error) => {
+                    console.error("Error deleting entry: ", error);
+                    showMessage('Error deleting entry. Please try again.');
+                });
         }
 
         function showMessage(message, isConfirmation = false) {
@@ -284,12 +301,16 @@
 
         function confirmSubmission() {
             if (pendingEntry) {
-                history.unshift(pendingEntry);
-                history = history.slice(0, 10);
-                database.ref('history').set(history);
-                updateHistoryList();
-                showMessage('Entry submitted successfully');
-                pendingEntry = null;
+                database.ref('history').push(pendingEntry)
+                    .then(() => {
+                        updateHistoryList();
+                        showMessage('Entry submitted successfully');
+                        pendingEntry = null;
+                    })
+                    .catch((error) => {
+                        console.error("Error submitting entry: ", error);
+                        showMessage('Error submitting entry. Please try again.');
+                    });
             }
         }
 
